@@ -1,8 +1,10 @@
 package com.example.linayun.mycoolweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +29,11 @@ import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import okhttp3.Response;
+
+import static android.content.ContentValues.TAG;
 
 /**
  * Created by linayun on 2016/12/23.
@@ -74,6 +80,12 @@ public class ChooseAreaFragment extends Fragment {
                 }else if(currentLevel == LEVEL_CITY){
                     selectedCity = cityList.get(position);
                     queryCountries();
+                }else if(currentLevel== LEVEL_COUNTRY){
+                    String weatherId = countryList.get(position).getWeatherId();
+                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                    intent.putExtra("weather_id", weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });
@@ -142,36 +154,28 @@ public class ChooseAreaFragment extends Fragment {
         }else {
             int provinceCode = selectedProvince.getProvinceCode();
             int cityCode = selectedCity.getCityCode();
-            String address = "http://goulin.tech/api/china/" + provinceCode + "/"+cityCode;
-            queryFromServer(address, "country");
+            String address = "http://guolin.tech/api/china/" + provinceCode + "/"+cityCode;
+            Log.i("county", address);
+            queryFromServer(address, "county");
         }
     }
 
     private void queryFromServer(String address, final String type){
+        showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        closeProgressDialog();
-                        Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
+                Log.i("Response", responseText);
                 boolean result = false;
                 if ("province".equals(type)){
                     result = Utility.handleProvinceResponse(responseText);
                 }else if("city".equals(type)){
                     result = Utility.handleCityResponse(responseText, selectedProvince.getId());
-                }else if("country".equals(type)){
+                }else if("county".equals(type)){
                     result = Utility.handleCountryResponse(responseText, selectedCity.getId());
                 }
-
                 if (result){
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
@@ -181,12 +185,22 @@ public class ChooseAreaFragment extends Fragment {
                                 queryProvinces();
                             }else if ("city".equals(type)){
                                 queryCities();
-                            }else if ("country".equals(type)){
+                            }else if ("county".equals(type)){
                                 queryCountries();
                             }
                         }
                     });
                 }
+            }
+            @Override
+            public void onFailure(Call call, IOException e) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
